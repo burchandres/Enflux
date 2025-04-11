@@ -41,6 +41,7 @@ func TestSingleRoutine(t *testing.T) {
 		WithName("add-zero"),
 		WithContext(ctx),
 		WithFunc(AddFunc{x: 0}),
+		WithScale(2),
 	)
 	inputAddChannel := make(chan Data)
 	addZeroRoutine.InputChannel = inputAddChannel
@@ -122,11 +123,13 @@ func TestTwoRoutines(t *testing.T) {
 		WithName("add-zero"),
 		WithContext(ctx),
 		WithFunc(AddFunc{x: 1}),
+		WithScale(2),
 	)
 	multiplyTwoRoutine := NewRoutine(
 		WithName("multiply-two"),
 		WithContext(ctx),
 		WithFunc(MultiplyFunc{x: 2}),
+		WithScale(2),
 	)
 
 	// Set input and output channels of AddRoutine

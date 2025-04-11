@@ -28,6 +28,15 @@ type Routine struct {
 	OutputChannels []chan Data
 }
 
+// Default configuration of the Routine is:
+// 
+// - name: EmptyRoutineName
+//
+// - ctx: context.Background()
+//  
+// - scale: 1
+//
+// - RoutineFunc: IdentityFunc{}
 func NewRoutine(opts ...RoutineOptFunc) *Routine {
 	o := defaultRoutineOpts()
 	for _, opt := range opts {
@@ -44,34 +53,38 @@ func NewRoutine(opts ...RoutineOptFunc) *Routine {
 // Channels are never closed by any routine as we could have a many-to-one relationship, so context cancellation is used for shutdown.
 //
 // If using a routine by itself the input and output channels are exposed to the user for setting and getting.
+//
+// Spins up r.scale (set with WithScale() optFunc) many goroutines to read off InputChannel
 func (r *Routine) Start() {
-	go func() {
-		slog.Info("starting...", "routine", r.name)
-		for {
-			select {
-			case <-r.ctx.Done():
-				slog.Info("exiting...", "routine", r.name)
-				// Input channel closure should be handled by the sender
-				return
-			case input, ok := <-r.InputChannel:
-				if !ok && input == nil {
-					slog.Debug("input channel closed and no more data is being processed, exiting...", "routine", r.name)
+	for range r.scale {
+		go func() {
+			slog.Info("starting...", "routine", r.name)
+			for {
+				select {
+				case <-r.ctx.Done():
+					slog.Info("exiting...", "routine", r.name)
+					// Input channel closure should be handled by the sender
 					return
-				}
-				slog.Debug("processing input...", "input", input, "routine", r.name)
-				// Continue running the routine
-				output := r.Run(input)
-				if output.IsValid() {
-					// Send the output to all output channels
-					for _, outputChannel := range r.OutputChannels {
-						outputChannel <- output
+				case input, ok := <-r.InputChannel:
+					if !ok && input == nil {
+						slog.Debug("input channel closed and no more data is being processed, exiting...", "routine", r.name)
+						return
 					}
-				} else {
-					slog.Warn("invalid output", "output", output, "routine", r.name)
+					slog.Debug("processing input...", "input", input, "routine", r.name)
+					// Continue running the routine
+					output := r.Run(input)
+					if output.IsValid() {
+						// Send the output to all output channels
+						for _, outputChannel := range r.OutputChannels {
+							outputChannel <- output
+						}
+					} else {
+						slog.Warn("invalid output", "output", output, "routine", r.name)
+					}
 				}
 			}
-		}
-	}()
+		}()
+	}
 }
 
 /***********************************
@@ -91,6 +104,7 @@ type RoutineOpts struct {
 	ctx context.Context
 	RoutineFunc
 	name string
+	scale int
 }
 
 func defaultRoutineOpts() *RoutineOpts {
@@ -98,23 +112,34 @@ func defaultRoutineOpts() *RoutineOpts {
 		name:        EmptyRoutineName,
 		RoutineFunc: IdentityFunc{},
 		ctx:         context.Background(),
+		scale:       1,
 	}
 }
 
+// Used to specify the struct whose Run() method houses the routine's core logic
 func WithFunc(routineFunc RoutineFunc) RoutineOptFunc {
 	return func(o *RoutineOpts) {
 		o.RoutineFunc = routineFunc
 	}
 }
 
+// Used to specify the unique name of the routine
 func WithName(name string) RoutineOptFunc {
 	return func(o *RoutineOpts) {
 		o.name = name
 	}
 }
 
+// Used to set the context of the routine
 func WithContext(ctx context.Context) RoutineOptFunc {
 	return func(o *RoutineOpts) {
 		o.ctx = ctx
+	}
+}
+
+// Used to set the number of goroutines the routine spins up to ingest incoming data
+func WithScale(scale int) RoutineOptFunc {
+	return func(o *RoutineOpts) {
+		o.scale = scale
 	}
 }
