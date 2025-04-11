@@ -11,4 +11,5 @@ Features:
   - Single entrypoint (root node), multiple terminal nodes
   - Modular Routine nodes with customizable behavior
   - Support for parallel execution paths
+  - Support for parallel execution on a Routine scale
   - Minimal dependencies and easy integration
