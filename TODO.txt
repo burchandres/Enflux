@@ -1,0 +1,3 @@
+Goals:
+- Write benchmarks
+- Double check testing covers all DAG properties
