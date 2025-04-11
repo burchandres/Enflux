@@ -1,0 +1,52 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  build:
+    desc: Build the project binary
+    cmds:
+      - task vet
+      - go build 
+
+  run:
+    desc: Run the project
+    cmds:
+      - go run .
+
+  test:
+    desc: Run the unit tests
+    cmds:
+      - go test ./...
+
+  nag:
+    desc: Lint, format and vet the project
+    cmds:
+      - task: fmt
+      - task: lint 
+      - task: vet
+      - task: vuln-check
+
+  lint:
+    desc: Lint the project with golangci-lint
+    cmds:
+      - golangci-lint run 
+
+  fmt:
+    desc: Format the project with gofmt
+    cmds:
+      - golangci-lint fmt ./...
+
+  vet:
+    dsec: Check for incorrect code
+    cmds:
+      - go vet ./...
+
+  vuln-check:
+    desc: Run vulnerability check against app
+    cmd: "{{.GO_PATH}}/bin/govulncheck {{.OPTIONS}} {{.CLI_ARGS}} {{.FILES}}"
+    vars:
+      FILES: '{{default "./..." .FILES}}'
+      GO_PATH:
+        sh: "go env GOPATH"
+
