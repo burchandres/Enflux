@@ -1,4 +1,4 @@
-module enflux
+module github.com/burchandres/enflux
 
 go 1.24.2
 
